@@ -56,8 +56,15 @@ class User extends Authenticatable
     {
         return $this->belongsTo(subscriptionplan::class);
     }
-    public function contacts()
-    {
-        return $this->hasMany(Contact::class);
-    }
+     // Referrals made by the user
+     public function referrals()
+     {
+         return $this->hasMany(Referral::class, 'referrer_id');
+     }
+ 
+     // Referrals earned by the user
+     public function earnedReferrals()
+     {
+         return $this->hasMany(Referral::class, 'referred_user_id');
+     }
 }

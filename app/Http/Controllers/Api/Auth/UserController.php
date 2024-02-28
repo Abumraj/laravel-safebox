@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\File;
+use App\Events\UserRegistered;
 use App\Models\subscriptionplan;
 use App\Models\User;
+use App\Models\Referral;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\ReferralResource;
 use App\Http\Resources\SubscriptionplanResource;
 use App\Http\Resources\UserResource;
 use App\Models\Product;
@@ -48,6 +51,18 @@ class UserController extends Controller
             'country' => $request->country,
             'password' => Hash::make($request->password),
         ]);
+        event(new UserRegistered($user));
+        if ($request->referral_code != null) {
+            $referingUser = User::where('referral_code', $request->referral_code)->first();
+            Referral::create(
+                [
+                    'referrer_id' => $referingUser->id,
+                    'referral_code' => $request->referral_code,
+                    'referred_user_id' => $user->id,
+                ]
+            );
+        }
+
         Auth::login($user);
         $token = $user->createToken($request->email)->plainTextToken;
         $response->put('token', $token);
@@ -96,6 +111,8 @@ class UserController extends Controller
             'email' => $request->email,
            
         ]);
+        event(new UserRegistered($user));
+
         Auth::login($user);
         $token = $user->createToken($request->email)->plainTextToken;
         $response->put('token', $token);
@@ -242,6 +259,14 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    public function referrals()
+    {
+
+        $user = User::find(Auth::id());
+        $referralsMadeByUser = $user->referrals;
+        return ReferralResource::collection($referrals);
+    }
+
     public function plans()
     {
         $sub =   subscriptionplan::all();
@@ -271,4 +296,9 @@ class UserController extends Controller
 
         return 'Failed to upload image.';
     }
+   private function addReferral()
+   {
+
+   }
+
 }
